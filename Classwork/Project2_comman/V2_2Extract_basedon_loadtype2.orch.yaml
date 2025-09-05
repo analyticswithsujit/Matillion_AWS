@@ -1,0 +1,361 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Extracting data from source when IS_ACTIVE is true"
+  components:
+    Start 0:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Python Script 0"
+      skipped: false
+      parameters:
+        componentName: "Start 0"
+    IF LOAD_TYPE =R:
+      type: "if"
+      transitions:
+        "true":
+        - "Copy of Python Script grid"
+        "false":
+        - "Python Script grid"
+      skipped: false
+      parameters:
+        componentName: "IF LOAD_TYPE =R"
+        mode: "Simple"
+        condition:
+        - - "JV_LOADTYPE"
+          - "Is"
+          - "Equal to"
+          - "R"
+        combineConditions: "And"
+    Set batchID:
+      type: "query-to-scalar"
+      skipped: false
+      parameters:
+        componentName: "Set batchID"
+        mode: "Advanced"
+        query: "/* Note: this query will be run as a subquery for the purposes of\
+          \ sampling the data.\n   As such it will be restricted by any subquery limitations\
+          \ specified by the current platform. */\n   \n   SELECT\n  DATE_PART('EPOCH_SECOND',current_timestamp)\
+          \ as BATCHID\n  FROM RESTAURANTSALES.RESTAURANT_METADATA.TABLE_LOAD_METADATA\n\
+          \tWHERE TABLE_NAME LIKE  '${ENV_VAR_TBL_TABLENAME}'"
+        scalarVariableMapping:
+        - - "ENV_VAR_BATCH_ID"
+          - "BATCHID"
+    Or 0:
+      type: "or"
+      transitions:
+        unconditional:
+        - "SQL Script 0"
+      skipped: false
+      parameters:
+        componentName: "Or 0"
+    v2_3_data_prep:
+      type: "run-transformation"
+      transitions:
+        unconditional:
+        - "V2_4_Reload"
+      skipped: false
+      parameters:
+        componentName: "v2_3_data_prep"
+        transformationJob: "v2_3_${JV_TABLE_NAME}"
+        setScalarVariables:
+        - - "JV_DB"
+          - "${JV_DB}"
+        - - "JV_SCHEMA"
+          - "${JV_SCHEMA}"
+        - - "JV_TABLE_NAME"
+          - "${JV_TABLE_NAME}"
+        setGridVariables:
+        - variable: "DES_COLUMNS"
+          status: "grid"
+          gridValues:
+            fromGrid:
+              variable: "DES_COLUMNS"
+              columns:
+              - "COl_name"
+              - "Primary_key"
+    Python Script 0:
+      type: "python-script"
+      transitions:
+        unconditional:
+        - "Table Metadata To Grid 0"
+      skipped: false
+      parameters:
+        componentName: "Python Script 0"
+        script: "###\n# Variables are directly accessible: \n#   print (myvar)\n#\
+          \ Updating a variable:\n#   context.updateVariable('myvar', 'new-value')\n\
+          # Grid Variables are accessible via the context:\n#   print (context.getGridVariable('mygridvar'))\n\
+          # Updating a grid variable:\n#   context.updateGridVariable('mygridvar',\
+          \ [['list','of'],['lists','!']])\n# A database cursor can be accessed from\
+          \ the context (Jython only):\n#   cursor = context.cursor()\n#   cursor.execute('select\
+          \ count(*) from mytable')\n#   rowcount = cursor.fetchone()[0]\n###\nprint\
+          \ (JV_DB)\nprint (JV_SCHEMA)\nprint (JV_TABLE_NAME)\n"
+        interpreter: "Python 3"
+        timeout: "360"
+    Table Metadata To Grid 0:
+      type: "table-metadata-to-grid"
+      transitions:
+        unconditional:
+        - "IF LOAD_TYPE =R"
+      skipped: false
+      parameters:
+        componentName: "Table Metadata To Grid 0"
+        database: "${JV_DB}"
+        schema: "${JV_SCHEMA}"
+        gridVariable: "DES_COLUMNS"
+        gridVariableMapping:
+        - "Name"
+        - "Primary Key"
+        targetTable: "${JV_TABLE_NAME}"
+    Python Script grid:
+      type: "python-script"
+      transitions:
+        success:
+        - "Copy of v2_3_data_prep"
+      skipped: false
+      parameters:
+        componentName: "Python Script grid"
+        script: "###\n# Variables are directly accessible: \n#   print (myvar)\n#\
+          \ Updating a variable:\n#   context.updateVariable('myvar', 'new-value')\n\
+          # Grid Variables are accessible via the context:\n#   print (context.getGridVariable('mygridvar'))\n\
+          # Updating a grid variable:\n#   context.updateGridVariable('mygridvar',\
+          \ [['list','of'],['lists','!']])\n# A database cursor can be accessed from\
+          \ the context (Jython only):\n#   cursor = context.cursor()\n#   cursor.execute('select\
+          \ count(*) from mytable')\n#   rowcount = cursor.fetchone()[0]\n###\nprint\
+          \ (JV_DB)\nprint (JV_SCHEMA)\nprint (JV_TABLE_NAME)\nprint(context.getGridVariable('DES_COLUMNS'))\n\
+          \n\nfor i in context.getGridVariable('DES_COLUMNS'):\n if i[1]=='Yes':\n\
+          \  context.updateVariable('JV_PRIMARYKEY', i[0])\n  \nprint(JV_PRIMARYKEY)\n"
+        interpreter: "Python 3"
+        timeout: "360"
+    V2_4_Reload:
+      type: "run-transformation"
+      transitions:
+        unconditional:
+        - "Or 0"
+      skipped: false
+      parameters:
+        componentName: "V2_4_Reload"
+        transformationJob: "Classwork/Project2_comman/V2_4_Reload"
+        setScalarVariables:
+        - - "JV_DB"
+          - "${JV_DB}"
+        - - "JV_SCHEMA"
+          - "${JV_SCHEMA}"
+        - - "JV_TABLE_NAME"
+          - "${JV_TABLE_NAME}"
+        setGridVariables:
+        - variable: "DES_COLUMNS"
+          status: "grid"
+          gridValues:
+            fromGrid:
+              variable: "DES_COLUMNS"
+              columns:
+              - "COl_name"
+              - "Primary_key"
+    Copy of Python Script grid:
+      type: "python-script"
+      transitions:
+        success:
+        - "v2_3_data_prep"
+      skipped: false
+      parameters:
+        componentName: "Copy of Python Script grid"
+        script: "###\n# Variables are directly accessible: \n#   print (myvar)\n#\
+          \ Updating a variable:\n#   context.updateVariable('myvar', 'new-value')\n\
+          # Grid Variables are accessible via the context:\n#   print (context.getGridVariable('mygridvar'))\n\
+          # Updating a grid variable:\n#   context.updateGridVariable('mygridvar',\
+          \ [['list','of'],['lists','!']])\n# A database cursor can be accessed from\
+          \ the context (Jython only):\n#   cursor = context.cursor()\n#   cursor.execute('select\
+          \ count(*) from mytable')\n#   rowcount = cursor.fetchone()[0]\n###\nprint\
+          \ (JV_DB)\nprint (JV_SCHEMA)\nprint (JV_TABLE_NAME)\nprint(context.getGridVariable('DES_COLUMNS'))\n\
+          \n\n"
+        interpreter: "Python 3"
+        timeout: "360"
+    Copy of v2_3_data_prep:
+      type: "run-transformation"
+      transitions:
+        unconditional:
+        - "V2_4_Iterative"
+      skipped: false
+      parameters:
+        componentName: "Copy of v2_3_data_prep"
+        transformationJob: "v2_3_${JV_TABLE_NAME}"
+        setScalarVariables:
+        setGridVariables:
+    V2_4_Iterative:
+      type: "run-transformation"
+      transitions:
+        unconditional:
+        - "Or 0"
+      skipped: false
+      parameters:
+        componentName: "V2_4_Iterative"
+        transformationJob: "Classwork/Project2_comman/V2_4_Iterative"
+        setScalarVariables:
+        - - "JV_DB"
+          - "${JV_DB}"
+        - - "JV_SCHEMA"
+          - "${JV_SCHEMA}"
+        - - "JV_TABLE_NAME"
+          - "${JV_TABLE_NAME}"
+        setGridVariables:
+        - variable: "DES_COLUMNS"
+          status: "grid"
+          gridValues:
+            fromGrid:
+              variable: "DES_COLUMNS"
+              columns:
+              - "COl_name"
+              - "Primary_key"
+    SQL Script 0:
+      type: "sql-script"
+      skipped: false
+      parameters:
+        componentName: "SQL Script 0"
+        sqlScript: |-
+          DROP VIEW ${JV_DB}.${JV_SCHEMA}_DES.${JV_TABLE_NAME}_VIEW;
+          -- TRUNCATE TABLE ${JV_DB}.${JV_SCHEMA}.${JV_TABLE_NAME}
+  variables:
+    JV_DB:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "RESTAURANTSALES"
+    JV_SCHEMA:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "RESTAURANT_DB"
+    JV_LOADTYPE:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "I"
+    JV_PRIMARYKEY:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "P"
+    JV_TABLE_NAME:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "ORDER_DETAILS"
+    SCALAR_VAR_BATCH_ID:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "000"
+    DES_COLUMNS:
+      metadata:
+        type: "GRID"
+        description: "This will have metadata of the destination columns"
+        scope: "SHARED"
+        visibility: "PUBLIC"
+        columns:
+          COl_name:
+            columnType: "TEXT"
+          Primary_key:
+            columnType: "TEXT"
+      defaultValue:
+      - - "ORDER_DETAILS_ID"
+        - "Yes"
+      - - "ORDER_ID"
+        - "No"
+      - - "ORDER_DATE"
+        - "No"
+      - - "ORDER_TIME"
+        - "No"
+design:
+  components:
+    Start 0:
+      position:
+        x: -608
+        "y": 32
+      tempMetlId: 869
+    IF LOAD_TYPE =R:
+      position:
+        x: -48
+        "y": 32
+      tempMetlId: 870
+    Set batchID:
+      position:
+        x: 688
+        "y": -208
+      tempMetlId: 871
+    Or 0:
+      position:
+        x: 512
+        "y": 0
+      tempMetlId: 872
+    v2_3_data_prep:
+      position:
+        x: 224
+        "y": -96
+      tempMetlId: 873
+    Python Script 0:
+      position:
+        x: -416
+        "y": 32
+      tempMetlId: 875
+    Table Metadata To Grid 0:
+      position:
+        x: -272
+        "y": 32
+      tempMetlId: 876
+    Python Script grid:
+      position:
+        x: 112
+        "y": 96
+      tempMetlId: 877
+    V2_4_Reload:
+      position:
+        x: 352
+        "y": -96
+      tempMetlId: 878
+    Copy of Python Script grid:
+      position:
+        x: 96
+        "y": -96
+      tempMetlId: 879
+    Copy of v2_3_data_prep:
+      position:
+        x: 240
+        "y": 96
+      tempMetlId: 3943
+    V2_4_Iterative:
+      position:
+        x: 368
+        "y": 96
+      tempMetlId: 5392
+    SQL Script 0:
+      position:
+        x: 656
+        "y": 0
+      tempMetlId: 5774
+  notes:
+    "868":
+      position:
+        x: -5
+        "y": -278
+      size:
+        height: 58
+        width: 250
+      theme: "yellow"
+      content: "Dont hardcode matiilion_WH, source db and src_schema. later add this\
+        \ data in metadatatable and populate into env variables in the first orchestration\
+        \ jobin iterator"

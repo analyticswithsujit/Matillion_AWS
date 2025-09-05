@@ -1,0 +1,157 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    ORDER_DETAILS:
+      type: "table-input"
+      parameters:
+        componentName: "ORDER_DETAILS"
+        database: "RESTAURANTSALES"
+        schema: "RESTAURANT_DB_DES"
+        targetTable: "ORDER_DETAILS_DES"
+        columnNames:
+        - "ORDER_DETAILS_ID"
+        - "ORDER_ID"
+        - "ORDER_DATE"
+        - "ORDER_TIME"
+        - "ITEM_ID"
+        timeOffset: ""
+    MENU_ITEMS:
+      type: "table-input"
+      parameters:
+        componentName: "MENU_ITEMS"
+        database: "RESTAURANTSALES"
+        schema: "RESTAURANT_DB_DES"
+        targetTable: "MENU_ITEMS_DES"
+        columnNames:
+        - "MENU_ITEM_ID"
+        - "ITEM_NAME"
+        - "CATEGORY"
+        - "PRICE"
+        timeOffset: ""
+    Join 0:
+      type: "join"
+      sources:
+      - "ORDER_DETAILS"
+      - "MENU_ITEMS"
+      parameters:
+        componentName: "Join 0"
+        mainTable: "ORDER_DETAILS"
+        mainTableAlias: "order_details"
+        joins:
+        - - "MENU_ITEMS"
+          - "Menu_items"
+          - "Inner"
+        joinExpressions:
+        - - "\"order_details\".\"ITEM_ID\"=\"Menu_items\".\"MENU_ITEM_ID\""
+          - "order_details_Inner_Menu_items"
+        columnMappings:
+        - - "order_details.ORDER_DETAILS_ID"
+          - "ORDER_DETAILS_ID"
+        - - "order_details.ORDER_ID"
+          - "ORDER_ID"
+        - - "order_details.ORDER_DATE"
+          - "ORDER_DATE"
+        - - "order_details.ORDER_TIME"
+          - "ORDER_TIME"
+        - - "order_details.ITEM_ID"
+          - "ITEM_ID"
+        - - "Menu_items.MENU_ITEM_ID"
+          - "MENU_ITEM_ID"
+        - - "Menu_items.ITEM_NAME"
+          - "MENU_ITEM_NAME"
+        - - "Menu_items.CATEGORY"
+          - "MENU_CATEGORY"
+        - - "Menu_items.PRICE"
+          - "MENU_PRICE"
+    Aggregate 0:
+      type: "aggregate"
+      sources:
+      - "Join 0"
+      parameters:
+        componentName: "Aggregate 0"
+        groupings:
+        - "MENU_ITEM_NAME"
+        aggregations:
+        - - "MENU_ITEM_NAME"
+          - "Count"
+        groupingType: "Group By"
+    Rank 0:
+      type: "rank"
+      sources:
+      - "Aggregate 0"
+      parameters:
+        componentName: "Rank 0"
+        includeInputColumns: "Yes"
+        partitionData:
+        orderingWithinPartitions:
+        - - "count_MENU_ITEM_NAME"
+          - "Desc"
+        functions:
+        - - "Dense Rank"
+          - "DenseRank"
+    MOST ORDERED:
+      type: "first-last"
+      sources:
+      - "Rank 0"
+      parameters:
+        componentName: "MOST ORDERED"
+        groupingColumns:
+        - "MENU_ITEM_NAME"
+        orderingInPartitions:
+        - - "DenseRank"
+          - "Asc"
+        firstLastColumns:
+        - - "DenseRank"
+          - "First"
+        ignoreNulls: "No"
+    Highest Spend Order:
+      type: "sql"
+      sources:
+      - "MENU_ITEMS"
+      - "ORDER_DETAILS"
+      parameters:
+        componentName: "Highest Spend Order"
+        query: |-
+          SELECT OD.order_ID, SUM(PRICE) ORDER_SPEND FROM RESTAURANTSALES.RESTAURANT_DB_DES.ORDER_DETAILS_DES OD
+          INNER JOIN RESTAURANTSALES.RESTAURANT_DB_DES.MENU_ITEMS_DES MI
+          ON OD.ITEM_ID=MI.MENU_ITEM_ID
+          GROUP BY order_ID
+          ORDER BY 2 DESC LIMIT 1
+design:
+  components:
+    ORDER_DETAILS:
+      position:
+        x: 16
+        "y": 112
+      tempMetlId: 913
+    MENU_ITEMS:
+      position:
+        x: 16
+        "y": 240
+      tempMetlId: 914
+    Join 0:
+      position:
+        x: 176
+        "y": 80
+      tempMetlId: 915
+    Aggregate 0:
+      position:
+        x: 304
+        "y": 64
+      tempMetlId: 916
+    Rank 0:
+      position:
+        x: 436
+        "y": 64
+      tempMetlId: 917
+    MOST ORDERED:
+      position:
+        x: 560
+        "y": 64
+      tempMetlId: 918
+    Highest Spend Order:
+      position:
+        x: 240
+        "y": 272
+      tempMetlId: 919

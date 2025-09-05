@@ -1,0 +1,87 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    CUSTOMER:
+      type: "table-input"
+      parameters:
+        componentName: "CUSTOMER"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "CUSTOMER"
+        columnNames:
+        - "CUSTOMERID"
+        - "LASTNAME"
+        - "FIRSTNAME"
+        - "BIRTHDATE"
+        - "GENDER"
+        - "PARTICIPANTTYPE"
+        - "REGIONID"
+        - "MARITALSTATUS"
+        timeOffset:
+    Calculator:
+      type: "calculator"
+      sources:
+      - "CUSTOMER"
+      parameters:
+        componentName: "Calculator"
+        includeInputColumns: "No"
+        calculations:
+        - - "\"FIRSTNAME\""
+          - "FIRSTNAME"
+        - - "\"LASTNAME\""
+          - "LASTNAME"
+        - - "CONCAT(\"FIRSTNAME\",' ', \"LASTNAME\")"
+          - "FULLNAME"
+        - - "YEAR(\"BIRTHDATE\")"
+          - "BIRTH_YEAR"
+        - - "MONTHNAME(\"BIRTHDATE\")"
+          - "BIRTH_MONTH"
+        - - "DAYNAME(\"BIRTHDATE\")"
+          - "BIRTH_DAY"
+    Aggregate:
+      type: "aggregate"
+      sources:
+      - "Calculator"
+      parameters:
+        componentName: "Aggregate"
+        groupings:
+        - "BIRTH_MONTH"
+        aggregations:
+        - - "FULLNAME"
+          - "Count Distinct"
+        groupingType: "Group By"
+    Rename:
+      type: "rename"
+      sources:
+      - "Aggregate"
+      parameters:
+        componentName: "Rename"
+        columnMapping:
+        - - "count_distinct_FULLNAME"
+          - "TOTAL_CUSTOMER"
+        - - "BIRTH_MONTH"
+          - "MONTH_NAME"
+        includeInputColumns: "No"
+design:
+  components:
+    CUSTOMER:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    Calculator:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId: 2
+    Aggregate:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId: 3
+    Rename:
+      position:
+        x: 480
+        "y": 0
+      tempMetlId: 4

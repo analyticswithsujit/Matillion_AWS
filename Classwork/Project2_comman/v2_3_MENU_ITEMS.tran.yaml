@@ -1,0 +1,123 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    database_src_tables:
+      type: "table-input"
+      parameters:
+        componentName: "database_src_tables"
+        database: "RESTAURANTSALES"
+        schema: "RESTAURANT_DB"
+        targetTable: "MENU_ITEMS"
+        columnNames:
+        - "MENU_ITEM_ID"
+        - "ITEM_NAME"
+        - "CATEGORY"
+        - "PRICE"
+        timeOffset: ""
+    Distinct 0:
+      type: "distinct"
+      sources:
+      - "database_src_tables"
+      parameters:
+        componentName: "Distinct 0"
+        columns:
+        - "MENU_ITEM_ID"
+        - "ITEM_NAME"
+        - "CATEGORY"
+        - "PRICE"
+    Filter 0:
+      type: "filter"
+      sources:
+      - "Distinct 0"
+      parameters:
+        componentName: "Filter 0"
+        filterConditions:
+        - - "ITEM_NAME"
+          - "Not"
+          - "Null"
+          - ""
+        - - "CATEGORY"
+          - "Not"
+          - "Null"
+          - ""
+        - - "PRICE"
+          - "Not"
+          - "Null"
+          - ""
+        combineCondition: "AND"
+    MENU_ITEMS_VIEW:
+      type: "create-view"
+      sources:
+      - "Filter 0"
+      parameters:
+        componentName: "MENU_ITEMS_VIEW"
+        database: "RESTAURANTSALES"
+        schema: "RESTAURANT_DB_DES"
+        viewName: "MENU_ITEMS_VIEW"
+        secureView: "No"
+        viewType: "Standard"
+  variables:
+    JV_DB:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "RESTAURANTSALES"
+    JV_SCHEMA:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "RESTAURANT_DB"
+    JV_TABLE_NAME:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "MENU_ITEMS"
+    DES_COLUMNS:
+      metadata:
+        type: "GRID"
+        description: "This will have metadata of the destination columns"
+        scope: "SHARED"
+        visibility: "PUBLIC"
+        columns:
+          COl_name:
+            columnType: "TEXT"
+          Primary_key:
+            columnType: "TEXT"
+      defaultValue:
+      - - "ORDER_DETAILS_ID"
+        - "Yes"
+      - - "ORDER_ID"
+        - "No"
+      - - "ORDER_DATE"
+        - "No"
+      - - "ORDER_TIME"
+        - "No"
+design:
+  components:
+    database_src_tables:
+      position:
+        x: 304
+        "y": 224
+      tempMetlId: 932
+    Distinct 0:
+      position:
+        x: 432
+        "y": 228
+      tempMetlId: 933
+    Filter 0:
+      position:
+        x: 544
+        "y": 224
+      tempMetlId: 934
+    MENU_ITEMS_VIEW:
+      position:
+        x: 672
+        "y": 224
+      tempMetlId: 4945

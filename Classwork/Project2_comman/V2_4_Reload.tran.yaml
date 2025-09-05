@@ -1,0 +1,82 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    ORDER_DETAILS 0:
+      type: "table-output"
+      sources:
+      - "SQL 0"
+      parameters:
+        componentName: "ORDER_DETAILS 0"
+        warehouse: "COMPUTE_WH"
+        database: "${JV_DB}"
+        schema: "${JV_SCHEMA}_DES"
+        targetTable: "${JV_TABLE_NAME}_DES"
+        fixDataTypeMismatches: "No"
+        columnMapping:
+          fromGrid:
+            variable: "DES_COLUMNS"
+            columns:
+            - "COl_name"
+            - "COl_name"
+        orderBy:
+        outputMode: "Truncate"
+    SQL 0:
+      type: "sql"
+      parameters:
+        componentName: "SQL 0"
+        query: "SELECT * FROM RESTAURANTSALES.RESTAURANT_DB_DES.${JV_TABLE_NAME}_VIEW"
+  variables:
+    JV_DB:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "RESTAURANTSALES"
+    JV_SCHEMA:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "RESTAURANT_DB"
+    JV_TABLE_NAME:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "MENU_ITEMS"
+    DES_COLUMNS:
+      metadata:
+        type: "GRID"
+        description: "This will have metadata of the destination columns"
+        scope: "SHARED"
+        visibility: "PUBLIC"
+        columns:
+          COl_name:
+            columnType: "TEXT"
+          Primary_key:
+            columnType: "TEXT"
+      defaultValue:
+      - - "ORDER_DETAILS_ID"
+        - "Yes"
+      - - "ORDER_ID"
+        - "No"
+      - - "ORDER_DATE"
+        - "No"
+      - - "ORDER_TIME"
+        - "No"
+design:
+  components:
+    ORDER_DETAILS 0:
+      position:
+        x: 400
+        "y": 240
+      tempMetlId: 929
+    SQL 0:
+      position:
+        x: 224
+        "y": 240
+      tempMetlId: 5165

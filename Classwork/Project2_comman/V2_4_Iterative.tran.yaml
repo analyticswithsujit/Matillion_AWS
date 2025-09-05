@@ -1,0 +1,181 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    Detect Changes 0:
+      type: "detect-changes"
+      sources:
+      - "src VIEW"
+      - "Destination_tables"
+      parameters:
+        componentName: "Detect Changes 0"
+        masterTable: "Destination_tables"
+        matchKeys:
+          fromGrid:
+            variable: "DES_COLUMNS"
+            columns:
+            - "COl_name"
+        compareColumns:
+          fromGrid:
+            variable: "DES_COLUMNS"
+            columns:
+            - "COl_name"
+        outputColumnMapping:
+        - - "master_${JV_PRIMARYKEY}"
+          - "compare_${JV_PRIMARYKEY}"
+        indicatorColumn: "Indicator"
+    Destination_tables:
+      type: "table-input"
+      parameters:
+        componentName: "Destination_tables"
+        database: "${JV_DB}"
+        schema: "${JV_SCHEMA}_DES"
+        targetTable: "${JV_TABLE_NAME}_DES"
+        columnNames:
+          fromGrid:
+            variable: "DES_COLUMNS"
+            columns:
+            - "COl_name"
+        timeOffset: ""
+    Filter 0:
+      type: "filter"
+      sources:
+      - "Detect Changes 0"
+      parameters:
+        componentName: "Filter 0"
+        filterConditions:
+        - - "Indicator"
+          - "Not"
+          - "Equal to"
+          - "I"
+        - - "Indicator"
+          - "Not"
+          - "Equal to"
+          - "D"
+        combineCondition: "AND"
+    ORDER_DETAILS_DES:
+      type: "table-update"
+      sources:
+      - "Filter 0"
+      parameters:
+        componentName: "ORDER_DETAILS_DES"
+        warehouse: "COMPUTE_WH"
+        database: "${JV_DB}"
+        schema: "${JV_SCHEMA}_DES"
+        targetTable: "${JV_TABLE_NAME}_DES"
+        targetAlias: "target"
+        sourceAlias: "input"
+        joinExpression:
+        - - "\"target\".${JV_PRIMARYKEY}=\"input\".${JV_PRIMARYKEY}"
+          - "Join"
+        whenMatched:
+        - - "\"target\".${JV_PRIMARYKEY}=\"input\".${JV_PRIMARYKEY}"
+          - "Update"
+        updateMapping:
+          fromGrid:
+            variable: "DES_COLUMNS"
+            columns:
+            - "COl_name"
+            - "COl_name"
+        includeNotMatched: "Yes"
+        insertMapping:
+          fromGrid:
+            variable: "DES_COLUMNS"
+            columns:
+            - "COl_name"
+            - "COl_name"
+    src VIEW:
+      type: "sql"
+      parameters:
+        componentName: "src VIEW"
+        query: "SELECT * FROM RESTAURANTSALES.RESTAURANT_DB_DES.${JV_TABLE_NAME}_VIEW"
+  variables:
+    JV_DB:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "RESTAURANTSALES"
+    JV_SCHEMA:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "RESTAURANT_DB"
+    JV_PRIMARYKEY:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "ORDER_DETAILS_ID"
+    JV_TABLE_NAME:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: "ORDER_DETAILS"
+    DES_COLUMNS:
+      metadata:
+        type: "GRID"
+        description: "This will have metadata of the destination columns"
+        scope: "SHARED"
+        visibility: "PUBLIC"
+        columns:
+          COl_name:
+            columnType: "TEXT"
+          Primary_key:
+            columnType: "TEXT"
+      defaultValue:
+      - - "ORDER_DETAILS_ID"
+        - "ORDER_DETAILS_ID"
+      - - "ORDER_ID"
+        - "ORDER_ID"
+      - - "ORDER_DATE"
+        - "ORDER_DATE"
+      - - "ORDER_TIME"
+        - "ORDER_TIME"
+      - - "ITEM_ID"
+        - "ITEM_ID"
+design:
+  components:
+    Detect Changes 0:
+      position:
+        x: 112
+        "y": 96
+      tempMetlId: 892
+    Destination_tables:
+      position:
+        x: -80
+        "y": 48
+      tempMetlId: 893
+    Filter 0:
+      position:
+        x: 240
+        "y": 96
+      tempMetlId: 895
+    ORDER_DETAILS_DES:
+      position:
+        x: 480
+        "y": 96
+      tempMetlId: 901
+    src VIEW:
+      position:
+        x: -96
+        "y": 144
+      tempMetlId: 7897
+  notes:
+    "891":
+      position:
+        x: -158
+        "y": -32
+      size:
+        height: 217
+        width: 443
+      theme: "yellow"
+      content: |-
+        **Detecting changes** in the source and destination tables using 'Detect changes' component.
+        This is then filtered to pick the non identical components using 'filter ' component
